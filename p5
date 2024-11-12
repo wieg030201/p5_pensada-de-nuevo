@@ -1,0 +1,184 @@
+//lectura y conversión de medida, Voy a hacer el ejercicio de forma que las interrupciones estén en el main
+
+// Función para inicializar timer y habilitar su interrupción.
+//Cabecera función timer1.h
+
+#ifndef _TIMER1_H
+#define _TIMER1_H
+//inicilaliza el Timer1 habilitando interrupción.
+
+void inicializarTimer1(unsigned int dms);
+
+#endif
+
+//Cuerpo de la función timer1.c
+#include <p33FJ32MC202.h> 
+#include "config.h" // Para poder utilizar inicializarReloj. 
+ 
+void inicializarTimer1(unsigned int dms) { 
+ 
+if (dms <= 16) { // Si el número de dms a contar por el timer es menor o igual a 16 dms, el preescalado será el 0. Se calculará entonces el PR1. 
+ 
+        T1CON = 0x0000; // Preescalado 0 (1/1). 
+ 
+PR1 = dms * (FCY / 10000); // Se calcula el PR1 teniendo en cuenta que son variables int por lo que primero se dividirá FCY entre (1*10000 (dms)). 
+    } 
+ 
+ 
+else if (dms <= 132) { //Si el número de dms a contar por el timer es mayor a 16 dms y menor o igual a 132, el preescalado será el 1. Se calculará entonces el PR1. 
+ 
+        T1CON = 0x0010; // Preescalado 1 (1/8). 
+ 
+PR1 = dms * (FCY / 80000); // Se calcula el PR1 teniendo en cuenta que son variables int por lo que primero se dividirá FCY entre (8*10000 (dms)). 
+ 
+    } 
+ 
+ 
+else if (dms <= 1058) {//Si el número de dms a contar por el timer es mayor a 132 dms y menor o igual a 1058, el preescalado será el 2. Se calculará entonces el PR1. 
+ 
+        T1CON = 0x0020; // Preescalado 2 (1/64). 
+ 
+PR1 = dms * (FCY / 640000); // Se calcula el PR1 teniendo en cuenta que son variables int por lo que primero se dividirá FCY entre (64*10000 (dms)). 
+    } 
+ 
+ 
+ 
+else if (dms <= 4235) { //Si el número de dms a contar por el timer es mayor a 1058 dms y menor o igual a 4235, el preescalado será el 3. Se calculará entonces el PR1. 
+ 
+        T1CON = 0x0030; // Preescalado 3 (1/256). 
+ 
+PR1 = dms * (FCY / 2560000);// Se calcula el PR1 teniendo en cuenta que son variables int por lo que primero se dividirá FCY entre (256*10000 (dms)). 
+ 
+    }  
+ 
+else { // Si el usuario pone un número dms mayor a 4235 (máximo que puede contar nuestro microcontrolador) se establecerá que cuente este. Esto es importante tenerlo en cuenta a la hora de programar. 
+ 
+        dms = 4235; 
+        T1CON = 0x0030; 
+        PR1 = dms * (FCY / 2560000); 
+    } 
+ 
+    TMR1 = 0; // Timer1 empiece a contar desde 0. 
+    IFS0bits.T1IF = 0; // bandera a 0. 
+    IEC0bits.T1IE = 1; //Habilitamos interrupción. 
+    IPC0bits.T1IP = 4; // Prioridad intermedia. 
+    T1CON |= (1 << 15); // Comienza a contar. 
+}
+
+// Función para configurar el periférico a 500 ksps y habilitar su interrupción
+//Cabecera de la función 
+
+#ifndef _ADC1_H
+#define _ADC1_H
+//inicilaliza el ADC1 habilitando interrupción Y EMPIEZA A MUESTREAR.
+
+void inicializarConversor(unsigned char canal);
+
+#endif
+
+//cuerpo de la función inicializarConversor(unsigned char canal)
+
+#include <p33FJ32MC202.h> 
+#include "config.h"
+
+void inicializarConversor(unsigned char canal){
+    
+    AD1CON3=0x0105; // Cuidado, puede cambiar el 5.
+    
+    IFS0bits.AD1IF=0;
+    IEC0bits.AD1IE=1;
+    IPC3bits.AD1IP=5; //PRIORIDAD.
+    
+    AD1CHS0=canal;
+    
+    AD1CON1=0x80E0;
+    AD1CON1|=(1<<1);
+    
+    
+}
+
+// Programamos el main
+
+#include <p33FJ32MC202.h> 
+#include "config.h"
+# include "timer1.h"
+#include "adc1.h"
+
+//declaracion de funciones
+unsigned int interpolarSensor(unsigned int medida_adc);
+
+// declaracion de variables
+static int listo=0;
+static unsigned int medida_digital;
+
+int main (void){
+
+inicializarReloj();
+
+AD1PCFGL=0xFFFF; //pines digitales
+AD1PCFGL&=~(1<<1); // pines analógicos
+
+//Salidas LED RB14
+TRISB&=~(1<<14);
+
+//Entrada sensor
+TRISA|=(1<<1);
+
+//LED inicialmente apagado
+PORTB|=(1<<14);
+
+inicializarTimer1(1000);
+inicializarConversor(1);
+
+while(1){
+
+if(medida_digital<600){ //si está por debajo de 600 lx
+PORTB&=~(1<<14); //enciendo el led RB14
+}
+
+else{ // si esta por encima 
+PORTB|=(1<<14); //Apagamos el led;
+}
+
+}
+
+return 0;
+}
+
+// interrupción del timer 
+
+void __attribute__((interrupt, no_auto_psv))_T1Interrupt(void){
+
+IFS0bits.T1IF=0; //bandera a 0
+
+listo=1;
+
+}
+
+//interrupción adc
+void __attribute__((interrupt, no_auto_psv)) _ADC1Interrupt(void){
+IFS0bits.AD1IF=0;
+if(listo==1){
+medida_digital=ADC1BUF0;
+listo=0;
+}
+AD1CON1|=(1<<1);
+}
+
+//función de interpolar
+
+unsigned int interpolarSensor(unsigned int medida_adc){
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
