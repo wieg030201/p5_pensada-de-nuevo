@@ -99,9 +99,9 @@ void inicializarConversor(unsigned char canal){
 
 // Programamos el main
 
-#include <p33FJ32MC202.h> 
+#include <p33FJ32MC202.h>
 #include "config.h"
-# include "timer1.h"
+#include "timer1.h"
 #include "adc1.h"
 
 //declaracion de funciones
@@ -110,7 +110,7 @@ unsigned int interpolarSensor(unsigned int medida_adc);
 // declaracion de variables
 static int listo=0;
 static unsigned int medida_digital;
-static unsigned int lux;
+
 
 
 int main (void){
@@ -118,23 +118,27 @@ int main (void){
 inicializarReloj();
 
 AD1PCFGL=0xFFFF; //pines digitales
-AD1PCFGL&=~(1<<1); // pines analógicos
+AD1PCFGL&=~(1<<5); // pines analógicos
 
 //Salidas LED RB14
 TRISB&=~(1<<14);
 
 //Entrada sensor
-TRISA|=(1<<1);
+TRISB|=(1<<3);
 
 //LED inicialmente apagado
 PORTB|=(1<<14);
 
 inicializarTimer1(1000);
-inicializarConversor(1);
+inicializarConversor(5);
 
 while(1){
+    
+    unsigned int valor;
+    
+    valor=interpolarSensor(medida_digital);
 
-if(lux<600){ //si está por debajo de 600 lx
+if(valor<600){ //si está por debajo de 600 lx
 PORTB&=~(1<<14); //enciendo el led RB14
 }
 
@@ -170,27 +174,38 @@ AD1CON1|=(1<<1);
 //función de interpolar
 
 unsigned int interpolarSensor(unsigned int medida_adc){
+    
+    unsigned int lux;
+  
+    
+    med=medida_adc;
 
-const unsigned int vec_adc[]={155, 384, 484, 631, 701, 738, 795, 879, 924, 964 }; // Voltios digitales a partir de la curva de calibracion realizada en la sesión 1 de la práctica 5. Nuestros cálculos nos han requerido una R3 de 8900 ohmios. En el laboratorio no se ha encontrado de ese valor por lo que hemos puesto dos resistencias en serie de 680 ohmios y 8200 ohmios=8880 ohmios. Se realizará el cálculo con este valor para mayor precisión.
-const unsigned int vec_lux[]={0, 105, 200, 390, 500, 600, 700, 850, 1000, 1200}; // Valor de los luxes.
+unsigned int vec_adc[]={155, 384, 484, 631, 701, 738, 795, 879, 924, 964 }; // Voltios digitales a partir de la curva de calibracion realizada en la sesión 1 de la práctica 5. Nuestros cálculos nos han requerido una R3 de 8900 ohmios. En el laboratorio no se ha encontrado de ese valor por lo que hemos puesto dos resistencias en serie de 680 ohmios y 8200 ohmios=8880 ohmios. Se realizará el cálculo con este valor para mayor precisión.
+ unsigned int vec_lux[]={0, 105, 200, 390, 500, 600, 700, 850, 1000, 1200}; // Valor de los luxes.
 
-int i=0; //variable para bucle for
-unsigned int parte1;
-unsigned int parte2;
-unsigned int parte3;
-unsigned int parte4;
+int i; //variable para bucle for
+unsigned int partea;
+unsigned int parteb;
+unsigned int partec;
+unsigned int parted;
+
 
 
 for(i=0; i<10; i++){
+    
+    
 
-if((vec_adc[i]>= medida_digital) && (vec_adc[i+1]>=medida_digital)){
+if((vec_adc[i]<= medida_adc) && (vec_adc[i+1]>=medida_adc)){
 
-parte1=(vec_lux[i+1]-vec_lux[i]);
-parte2=(medida_digital-vec_adc[i]);
-parte3=(vec_adc[i+1]-vec_adc[i]);
-parte4=vec_lux[i];
+partea=((vec_lux[i+1])-(vec_lux[i]));
+parteb=(medida_adc-(vec_adc[i]));
+partec=((vec_adc[i+1])-(vec_adc[i]));
+parted=(vec_lux[i]);
 
-lux=((parte1*parte2)/parte3)+parte4;
+lux=((partec)/(partea))*(parteb)+parted;
+
+
+break;
 
 
 
@@ -204,6 +219,8 @@ return (lux);
 
 
 }
+    
+
 
 
 
