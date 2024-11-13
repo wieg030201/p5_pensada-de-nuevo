@@ -112,6 +112,7 @@ static int listo=0;
 static unsigned int medida_digital;
 static unsigned int lux;
 
+
 int main (void){
 
 inicializarReloj();
@@ -133,7 +134,7 @@ inicializarConversor(1);
 
 while(1){
 
-if(medida_digital<600){ //si está por debajo de 600 lx
+if(lux<600){ //si está por debajo de 600 lx
 PORTB&=~(1<<14); //enciendo el led RB14
 }
 
@@ -177,11 +178,19 @@ int i=0; //variable para bucle for
 unsigned int parte1;
 unsigned int parte2;
 unsigned int parte3;
+unsigned int parte4;
 
 
 for(i=0; i<10; i++){
 
-if((vec_adc[i]>= medida_digital) && (vec_adc[i+1]>medida_digital)){
+if((vec_adc[i]>= medida_digital) && (vec_adc[i+1]>=medida_digital)){
+
+parte1=(vec_lux[i+1]-vec_lux[i]);
+parte2=(medida_digital-vec_adc[i]);
+parte3=(vec_adc[i+1]-vec_adc[i]);
+parte4=vec_lux[i];
+
+lux=((parte1*parte2)/parte3)+parte4;
 
 
 
@@ -190,6 +199,8 @@ if((vec_adc[i]>= medida_digital) && (vec_adc[i+1]>medida_digital)){
 
 
 }
+
+return (lux);
 
 
 }
